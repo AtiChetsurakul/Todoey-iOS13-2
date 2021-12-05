@@ -14,6 +14,11 @@ class ToDoListViewController: UITableViewController {
     @IBOutlet weak var searchBar: UISearchBar!
     var itemArray:[ItemToDo] = [] // This is custom Information which userDefaults rejecting
     
+    var selectedCate : CategoryX? {
+        didSet{
+            loadItemViaPredicated()
+        }
+    }
 
 
     
@@ -21,7 +26,7 @@ class ToDoListViewController: UITableViewController {
         super.viewDidLoad()
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-        loadItem()
+//        loadItem()
 //        searchBar.delegate = self
     }
     
@@ -31,6 +36,7 @@ class ToDoListViewController: UITableViewController {
         let action = UIAlertAction (title: "ADD ITEM", style: .default) { action in
             let newItem = ItemToDo(context: self.context)
             newItem.todo = textfield.text!
+            newItem.parentCate = self.selectedCate 
             self.itemArray.append(newItem)
             self.saveItem()
             
@@ -53,19 +59,22 @@ extension ToDoListViewController:UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         let request:NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()
         print(request)
-        request.predicate = NSPredicate(format: "todo CONTAINS[cd] %@", searchBar.text!)
+//        request.predicate = NSPredicate(format: "todo CONTAINS[cd] %@", searchBar.text!)
+        
+        request.predicate = NSPredicate(format: "parentCate.name MATCHES %@ AND todo CONTAINS[cd] %@", selectedCate!.name!,searchBar.text!)
         
         
 //        let sortDescriptor = NSSortDescriptor(key: "todo", ascending: true)
 //        request.sortDescriptors = [sortDescriptor]
         request.sortDescriptors = [NSSortDescriptor(key: "todo", ascending: true)]
         loadItem(with: request)
+        
         saveItem()
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
-            loadItem()
+            loadItemViaPredicated()
             saveItem()
             // Toremove keyboard by unfocus searchbar
             DispatchQueue.main.async {
@@ -129,9 +138,20 @@ extension ToDoListViewController {
 //            print("fetct error\(error)")
 //        }
 //    }
+    func loadItemViaPredicated() {
+        let request:NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()
+        let predicate = NSPredicate(format:"parentCate.name MATCHES %@", selectedCate!.name!)
+        request.predicate = predicate
+        do
+        {
+          itemArray = try context.fetch(request)
+        }
+        catch {
+            print("fetct error\(error)")
+        }
+    }
     
-    func loadItem(with request:NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()) {
-       
+    func loadItem(with request:NSFetchRequest<ItemToDo>/*= ItemToDo.fetchRequest()*/) {
         do
         {
           itemArray = try context.fetch(request)
