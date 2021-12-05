@@ -11,6 +11,7 @@ import CoreData
 class ToDoListViewController: UITableViewController {
     let context = (UIApplication.shared.delegate as!  AppDelegate).persistentContainer.viewContext
 
+    @IBOutlet weak var searchBar: UISearchBar!
     var itemArray:[ItemToDo] = [] // This is custom Information which userDefaults rejecting
     
 
@@ -18,8 +19,10 @@ class ToDoListViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-
+        loadItem()
+//        searchBar.delegate = self
     }
     
     @IBAction func addNewItemPressed(_ sender: UIBarButtonItem) {
@@ -45,7 +48,38 @@ class ToDoListViewController: UITableViewController {
     
 }
 
+//MARK: for SearchBar
+extension ToDoListViewController:UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request:NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()
+        print(request)
+        request.predicate = NSPredicate(format: "todo CONTAINS[cd] %@", searchBar.text!)
+        
+        
+//        let sortDescriptor = NSSortDescriptor(key: "todo", ascending: true)
+//        request.sortDescriptors = [sortDescriptor]
+        request.sortDescriptors = [NSSortDescriptor(key: "todo", ascending: true)]
+        loadItem(with: request)
+        saveItem()
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItem()
+            saveItem()
+            // Toremove keyboard by unfocus searchbar
+            DispatchQueue.main.async {
+            searchBar.resignFirstResponder()
+            }
+           
+        }
+    }
+    
 
+}
+
+
+//MARK: FOR table controller
 extension ToDoListViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return itemArray.count
@@ -61,8 +95,14 @@ extension ToDoListViewController {
     
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
-        itemArray[indexPath.row].isCheck.toggle()
+     /* U (update database Method)
+        itemArray[indexPath.row].setValue("Completed", forKey: "todo")
+     */
+        //        NEED TO BE exact Order to del (Database -> localArray -> Commit to context.save)
+        //        context.delete(itemArray[indexPath.row])
+        //        itemArray.remove(at: indexPath.row)
+       itemArray[indexPath.row].isCheck.toggle()
+
         saveItem()
         tableView.reloadData()
 
@@ -80,17 +120,28 @@ extension ToDoListViewController {
     }
     
 //    func loadItem() {
-//        let decoder = PropertyListDecoder()
+//        let request: NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()
 //        do
 //        {
-//            let data = try Data(contentsOf: dataFilePath!)
-//            itemArray = try decoder.decode([ItemToDo].self, from: data)
+//          itemArray = try context.fetch(request)
 //        }
 //        catch {
-//          print(error)
+//            print("fetct error\(error)")
 //        }
 //    }
     
+    func loadItem(with request:NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()) {
+       
+        do
+        {
+          itemArray = try context.fetch(request)
+        }
+        catch {
+            print("fetct error\(error)")
+        }
+    }
+
+
 }
 
 //func saveItem() {
@@ -103,6 +154,22 @@ extension ToDoListViewController {
 //    }
 //    self.tableView.reloadData()
 //}
+
+
+//    func loadItem() {
+//        let decoder = PropertyListDecoder()
+//        do
+//        {
+//            let data = try Data(contentsOf: dataFilePath!)
+//            itemArray = try decoder.decode([ItemToDo].self, from: data)
+//        }
+//        catch {
+//          print(error)
+//        }
+//    }
+    
+
+
 
 //        if itemArray[indexPath.row].isCheck {
 //            tableCons?.accessoryType = .checkmark
@@ -153,4 +220,21 @@ extension ToDoListViewController {
 
 //if let items = (defaults.array(forKey: "TodoListArrays") as? [ItemToDo]) {
 //    itemArray = items
+//}
+//func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+//    let request:NSFetchRequest<ItemToDo> = ItemToDo.fetchRequest()
+//    print(request)
+//    let predicated = NSPredicate(format: "todo CONTAINS[cd] %@", searchBar.text!)
+//    request.predicate = predicated
+//
+//    let sortDescriptor = NSSortDescriptor(key: "todo", ascending: true)
+//    request.sortDescriptors = [sortDescriptor]
+//    do
+//    {
+//      itemArray = try context.fetch(request)
+//    }
+//    catch {
+//        print("fetct error\(error)")
+//    }
+//    saveItem()
 //}
